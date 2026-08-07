@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infoweb — Company Data Pipeline | Thu thập & Làm giàu Dữ liệu Triển lãm</title>
+  <meta name="description" content="Company Data Pipeline - Công cụ thu thập, làm giàu và chuẩn hóa dữ liệu doanh nghiệp triển lãm. 14 bước tự động hóa từ crawl đến xuất Excel.">
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Remixicon Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="logo-icon"><i class="ri-radar-line"></i></div>
+        <div class="brand-text">
+          <h1>Company Data Pipeline</h1>
+          <span>14-bước tự động hóa dữ liệu triển lãm</span>
+        </div>
+      </div>
+      <div class="navbar-actions">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span id="serverStatus">Hệ thống sẵn sàng</span>
+        </div>
+        <button id="btnImportJson" class="btn btn-glass" title="Tải lên Session JSON">
+          <i class="ri-upload-2-line"></i> Import JSON
+        </button>
+        <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
+      </div>
+    </header>
+
+    <!-- Main Grid Workspace -->
+    <main class="workspace-grid">
+      <!-- Left Column: Workflow Control Center -->
+      <aside class="control-panel">
+        
+        <!-- Phase 1 Card -->
+        <div class="card phase-card phase-1">
+          <div class="card-header">
+            <div class="phase-badge">Pha 1</div>
+            <h2>Thu thập Danh sách</h2>
+          </div>
+          <p class="card-desc">Parse HTML tự động, lấy thông tin cơ bản và tự động bấm Next qua từng trang.</p>
+          
+          <div class="form-group">
+            <label for="inputUrl"><i class="ri-link"></i> URL Trang danh sách triển lãm</label>
+            <input type="url" id="inputUrl" placeholder="https://example.com/exhibitors" autocomplete="off">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="inputMaxPages"><i class="ri-pages-line"></i> Số trang tối đa</label>
+              <input type="number" id="inputMaxPages" value="50" min="1" max="500">
+            </div>
+            <div class="form-group flex-1 align-self-end">
+              <button id="btnStartPhase1" class="btn btn-primary btn-block">
+                <i class="ri-play-fill"></i> Bắt đầu Pha 1
+              </button>
+            </div>
+          </div>
+
+          <div class="progress-box hidden" id="phase1ProgressBox">
+            <div class="progress-header">
+              <span id="phase1StatusText">Đang cào dữ liệu...</span>
+              <span id="phase1PageCount">Trang 1</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="phase1ProgressBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 2 Card -->
+        <div class="card phase-card phase-2">
+          <div class="card-header">
+            <div class="phase-badge badge-emerald">Pha 2</div>
+            <h2>Làm giàu Dữ liệu</h2>
+          </div>
+          <p class="card-desc">Chuẩn hóa URL → Tìm kiếm website (nếu thiếu) → Chấm điểm → Crawl → Lấy Email/Phone/Address (có cache theo domain) → Phân loại tỉnh thành & quốc gia.</p>
+          
+          <div class="form-group">
+            <label for="selectSession"><i class="ri-history-line"></i> Chọn dữ liệu lưu sẵn từ Pha 1</label>
+            <select id="selectSession">
+              <option value="">-- Dùng dữ liệu vừa thu thập --</option>
+            </select>
+          </div>
+
+          <div class="action-buttons-row">
+            <button id="btnStartPhase2" class="btn btn-emerald flex-1" disabled>
+              <i class="ri-magic-line"></i> Bắt đầu Pha 2
+            </button>
+            <button id="btnStopTask" class="btn btn-danger hidden">
+              <i class="ri-stop-circle-line"></i> Dừng
+            </button>
+          </div>
+
+          <div class="progress-box hidden" id="phase2ProgressBox">
+            <div class="progress-header">
+              <span id="phase2StatusText">Đang làm giàu dữ liệu...</span>
+              <span id="phase2ProgressCounter">0 / 0</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill fill-emerald" id="phase2ProgressBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Hub Card -->
+        <div class="card export-card">
+          <div class="card-header">
+            <i class="ri-file-excel-2-line excel-icon"></i>
+            <h2>Xuất Excel WorkBook</h2>
+          </div>
+          <p class="card-desc">7 Sheet: <strong>All Data</strong>, HCM, Hà Nội, Đà Nẵng, Khác, Quốc tế + <strong>📊 Pipeline Report</strong>. Có cột Site Status màu, Source badge, Email MX Status.</p>
+          <button id="btnExportExcel" class="btn btn-indigo btn-block btn-lg" disabled>
+            <i class="ri-download-cloud-2-line"></i> Xuất Excel Multi-Sheet (.xlsx)
+          </button>
+          <div class="cache-actions">
+            <span class="cache-label"><i class="ri-database-2-line"></i> Domain Cache:</span>
+            <span id="cacheCount">–</span> domains
+            <button id="btnClearCache" class="btn-text-danger"><i class="ri-delete-bin-line"></i> Xóa cache</button>
+          </div>
+        </div>
+
+        <!-- Live Terminal Stream -->
+        <div class="card terminal-card">
+          <div class="terminal-header">
+            <span><i class="ri-terminal-box-line"></i> Nhật ký hệ thống</span>
+            <button id="btnClearLog" class="btn-icon" title="Xóa nhật ký"><i class="ri-delete-bin-line"></i></button>
+          </div>
+          <div class="terminal-body" id="logTerminal">
+            <div class="log-line text-muted">[00:00:00] Sẵn sàng chạy workflow...</div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Right Column: Data Workspace & Analytics -->
+      <section class="data-workspace">
+        
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon icon-blue"><i class="ri-building-4-line"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Doanh nghiệp</span>
+              <h3 id="statTotal">0</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon icon-emerald"><i class="ri-earth-line"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Website hợp lệ</span>
+              <h3 id="statValidWebsites">0</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon icon-purple"><i class="ri-mail-check-line"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Email lấy được</span>
+              <h3 id="statEmails">0</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon icon-amber"><i class="ri-phone-find-line"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Số điện thoại</span>
+              <h3 id="statPhones">0</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Report Panel (Step 14) -->
+        <div class="report-panel hidden" id="reportPanel">
+          <div class="report-header">
+            <i class="ri-bar-chart-2-line"></i>
+            <h3>Báo cáo Pipeline hoàn thành</h3>
+            <button class="btn-icon" id="btnCloseReport"><i class="ri-close-line"></i></button>
+          </div>
+          <div class="report-grid" id="reportGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Sheet Group Tabs & Filter Bar -->
+        <div class="table-controls-card">
+          <div class="tabs-header">
+            <button class="tab-btn active" data-group="ALL"><i class="ri-grid-fill"></i> Tất cả (<span id="countAll">0</span>)</button>
+            <button class="tab-btn" data-group="Hồ Chí Minh"><i class="ri-map-pin-2-fill"></i> Hồ Chí Minh (<span id="countHcm">0</span>)</button>
+            <button class="tab-btn" data-group="Hà Nội"><i class="ri-map-pin-2-fill"></i> Hà Nội (<span id="countHanoi">0</span>)</button>
+            <button class="tab-btn" data-group="Đà Nẵng"><i class="ri-map-pin-2-fill"></i> Đà Nẵng (<span id="countDanang">0</span>)</button>
+            <button class="tab-btn" data-group="Khác"><i class="ri-map-pin-fill"></i> VN Khác (<span id="countKhac">0</span>)</button>
+            <button class="tab-btn" data-group="Quốc tế"><i class="ri-global-line"></i> Quốc tế (<span id="countQuocTe">0</span>)</button>
+          </div>
+
+          <div class="search-filter-bar">
+            <div class="search-box">
+              <i class="ri-search-line"></i>
+              <input type="text" id="tableSearchInput" placeholder="Tìm theo Tên công ty, Sản phẩm, Website, Email, Phone...">
+            </div>
+            <div class="records-info">
+              Hiển thị <span id="displayedCount">0</span> bản ghi
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="table-container card">
+          <table class="custom-table" id="companiesTable">
+            <thead>
+              <tr>
+                <th style="width: 44px;">STT</th>
+                <th>Doanh nghiệp</th>
+                <th>Sản phẩm / Booth</th>
+                <th>Website</th>
+                <th>Site Status</th>
+                <th>Source</th>
+                <th>Email / Phone</th>
+                <th>Địa chỉ</th>
+                <th>Phân loại</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr class="empty-row">
+                <td colspan="8">
+                  <div class="empty-state">
+                    <i class="ri-inbox-archive-line"></i>
+                    <p>Chưa có dữ liệu. Nhập URL ở Pha 1 hoặc tải session cũ để bắt đầu.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
